@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Наложение видео</title>
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@latest"></script>
+</head>
+<body>
+    <input type="file" id="video1" accept="video/*" />
+    <input type="file" id="video2" accept="video/*" />
+    <button id="process">Обработать видео</button>
+    <a id="download" style="display:none;">Скачать готовое видео</a>
+    <video id="output" controls></video>
+
+    <script>
+        const { createFFmpeg, fetchFile } = FFmpeg;
+        const ffmpeg = createFFmpeg({ log: true });
+
+        document.getElementById('process').addEventListener('click', async () => {
+            const video1File = document.getElementById('video1').files[0];
+            const video2File = document.getElementById('video2').files[0];
+
+            if (!video1File || !video2File) {
+                alert('Пожалуйста, выберите оба видео!');
+                return;
+            }
+
+            await ffmpeg.load();
+            ffmpeg.FS('writeFile', 'video1.mp4', await fetchFile(video1File));
+            ffmpeg.FS('writeFile', 'video2.mp4', await fetchFile(video2File));
+
+            // Наложение видео с изменением частоты кадров
+            await ffmpeg.run(
+                '-i', 'video1.mp4', 
+                '-i', 'video2.mp4', 
+                '-filter_complex', 
+                '[0:v]setpts=PTS*1.5[v0];[1:v]fps=60[v1];[v0][v1]overlay=0:0', 
+                'output.mp4'
+            );
+
+            // Получаем результат
+            const data = ffmpeg.FS('readFile', 'output.mp4');
+
+            // Создаем URL для вывода
+            const outputVideo = document.getElementById('output');
+            const videoURL = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+            outputVideo.src = videoURL;
+
+            // Создаем ссылку для скачивания
+            const downloadLink = document.getElementById('download');
+            downloadLink.href = videoURL;
+            downloadLink.download = 'output.mp4';
+            downloadLink.style.display = 'block';
+            downloadLink.textContent = 'Скачать готовое видео';
+        });
+    </script>
+</body>
+</html>
