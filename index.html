@@ -4,12 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Обработка Видео</title>
-    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.9.8/dist/ffmpeg.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@latest/dist/ffmpeg.min.js"></script>
 </head>
 <body>
     <h1>Обработка Видео</h1>
     <input type="file" id="videoInput" accept="video/*">
-    <button id="processButton">Обработать Видеоо</button>
+    <button id="processButton">Обработать Видео</button>
+    <p id="status" style="margin-top: 20px;"></p>
     <a id="downloadLink" style="display:none;">Скачать готовое видео</a>
     
     <script>
@@ -18,23 +19,32 @@
 
         document.getElementById('processButton').addEventListener('click', async () => {
             const input = document.getElementById('videoInput');
+            const status = document.getElementById('status');
             if (input.files.length === 0) {
-                alert("Пожалуйста, выберите видео файл.");
+                status.innerText = "Пожалуйста, выберите видео файл.";
                 return;
             }
 
             const file = input.files[0];
+            status.innerText = `Файл загружен: ${file.name}`;
 
             // Загружаем ffmpeg.js, если он еще не загружен
             if (!ffmpeg.isLoaded()) {
+                status.innerText = "Загрузка ffmpeg.js...";
                 await ffmpeg.load();
+                status.innerText = "ffmpeg.js загружен.";
+            } else {
+                status.innerText = "ffmpeg.js уже загружен.";
             }
 
             // Загружаем видеофайл в память
+            status.innerText = "Запись файла в память...";
             ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(file));
 
-            // Применяем отзеркаливание и увеличиваем частоту кадров до 535
-            await ffmpeg.run('-i', 'input.mp4', '-vf', 'hflip,fps=535', 'output.mp4');
+            // Изменяем частоту кадров до 535
+            status.innerText = "Запуск обработки видео...";
+            await ffmpeg.run('-i', 'input.mp4', '-vf', 'fps=535', 'output.mp4');
+            status.innerText = "Обработка завершена.";
 
             // Получаем обработанное видео и создаем ссылку для загрузки
             const data = ffmpeg.FS('readFile', 'output.mp4');
@@ -46,7 +56,9 @@
             downloadLink.download = 'output.mp4';
             downloadLink.style.display = 'block';
             downloadLink.innerText = 'Скачать готовое видео';
+            status.innerText = "Ссылка для скачивания создана.";
         });
     </script>
 </body>
 </html>
+
