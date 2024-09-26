@@ -3,61 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Наложение видео</title>
-    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@latest"></script>
+    <title>Обработка Видео</title>
+    <script src="https://cdn.rawgit.com/Kagami/ffmpeg.js/master/ffmpeg.min.js"></script>
 </head>
 <body>
-    <input type="file" id="video1" accept="video/*" />
-    <input type="file" id="video2" accept="video/*" />
-    <button id="process">Обработать видео</button>
-    <a id="download" style="display:none;">Скачать готовое видео</a>
-    <video id="output" controls></video>
-
+    <h1>Обработка Видео</h1>
+    <input type="file" id="videoInput" accept="video/*">
+    <button id="processButton">Обработать Видео</button>
+    <a id="downloadLink" style="display:none;">Скачать готовое видео</a>
+    
     <script>
-        const { createFFmpeg, fetchFile } = FFmpeg;
-        const ffmpeg = createFFmpeg({ log: true });
-
-        document.getElementById('process').addEventListener('click', async () => {
-            const video1File = document.getElementById('video1').files[0];
-            const video2File = document.getElementById('video2').files[0];
-
-            if (!video1File || !video2File) {
-                alert('Пожалуйста, выберите оба видео!');
+        document.getElementById('processButton').addEventListener('click', async () => {
+            const input = document.getElementById('videoInput');
+            if (input.files.length === 0) {
+                alert("Пожалуйста, выберите видео файл.");
                 return;
             }
 
-            console.log('Загружаем FFmpeg...');
-            await ffmpeg.load();
-            console.log('FFmpeg загружен');
-
-            console.log('Записываем файлы в память...');
-            ffmpeg.FS('writeFile', 'video1.mp4', await fetchFile(video1File));
-            ffmpeg.FS('writeFile', 'video2.mp4', await fetchFile(video2File));
-            console.log('Файлы записаны');
-
-            console.log('Начинаем обработку видео...');
-            await ffmpeg.run(
-                '-i', 'video1.mp4', 
-                '-i', 'video2.mp4', 
-                '-filter_complex', 
-                '[0:v]setpts=PTS*1.5[v0];[1:v]fps=60[v1];[v0][v1]overlay=0:0', 
-                'output.mp4'
-            );
-
-            console.log('Обработка завершена');
-
-            const data = ffmpeg.FS('readFile', 'output.mp4');
-            const outputVideo = document.getElementById('output');
-            const videoURL = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
-            outputVideo.src = videoURL;
-
-            const downloadLink = document.getElementById('download');
-            downloadLink.href = videoURL;
-            downloadLink.download = 'output.mp4';
-            downloadLink.style.display = 'block';
-            downloadLink.textContent = 'Скачать готовое видео';
+            const file = input.files[0];
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                const data = event.target.result;
+                const ffmpeg = FFmpeg.createFFmpeg({ log: true });
+                
+                await ffmpeg.load();
+                ffmpeg.FS('writeFile', 'input.mp4', new Uint8Array(data));
+                
+                // Увеличение частоты кадров до 535 и применение эффекта отзеркаливания
+                await ffmpeg.run('-i', 'input.mp4', '-vf', 'hflip,fps=535', 'output.mp4');
+                
+                const outputData = ffmpeg.FS('readFile', 'output.mp4');
+                const blob = new Blob([outputData.buffer], { type: 'video/mp4' });
+                const url = URL.createObjectURL(blob);
+                
+                const downloadLink = document.getElementById('downloadLink');
+                downloadLink.href = url;
+                downloadLink.download = 'output.mp4';
+                downloadLink.style.display = 'block';
+                downloadLink.innerText = 'Скачать готовое видео';
+            };
+            reader.readAsArrayBuffer(file);
         });
     </script>
 </body>
 </html>
+
 
