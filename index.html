@@ -26,11 +26,16 @@
                 return;
             }
 
+            console.log('Загружаем FFmpeg...');
             await ffmpeg.load();
+            console.log('FFmpeg загружен');
+
+            console.log('Записываем файлы в память...');
             ffmpeg.FS('writeFile', 'video1.mp4', await fetchFile(video1File));
             ffmpeg.FS('writeFile', 'video2.mp4', await fetchFile(video2File));
+            console.log('Файлы записаны');
 
-            // Наложение видео с изменением частоты кадров
+            console.log('Начинаем обработку видео...');
             await ffmpeg.run(
                 '-i', 'video1.mp4', 
                 '-i', 'video2.mp4', 
@@ -39,15 +44,13 @@
                 'output.mp4'
             );
 
-            // Получаем результат
-            const data = ffmpeg.FS('readFile', 'output.mp4');
+            console.log('Обработка завершена');
 
-            // Создаем URL для вывода
+            const data = ffmpeg.FS('readFile', 'output.mp4');
             const outputVideo = document.getElementById('output');
             const videoURL = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
             outputVideo.src = videoURL;
 
-            // Создаем ссылку для скачивания
             const downloadLink = document.getElementById('download');
             downloadLink.href = videoURL;
             downloadLink.download = 'output.mp4';
@@ -57,3 +60,4 @@
     </script>
 </body>
 </html>
+
