@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Обработка Видео</title>
-    <script src="https://cdn.rawgit.com/Kagami/ffmpeg.js/master/ffmpeg.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.9.8/dist/ffmpeg.min.js"></script>
 </head>
 <body>
     <h1>Обработка Видео</h1>
@@ -13,6 +13,9 @@
     <a id="downloadLink" style="display:none;">Скачать готовое видео</a>
     
     <script>
+        const { createFFmpeg, fetchFile } = FFmpeg;
+        const ffmpeg = createFFmpeg({ log: true });
+
         document.getElementById('processButton').addEventListener('click', async () => {
             const input = document.getElementById('videoInput');
             if (input.files.length === 0) {
@@ -21,31 +24,29 @@
             }
 
             const file = input.files[0];
-            const reader = new FileReader();
-            reader.onload = async (event) => {
-                const data = event.target.result;
-                const ffmpeg = FFmpeg.createFFmpeg({ log: true });
-                
+
+            // Загружаем ffmpeg.js, если он еще не загружен
+            if (!ffmpeg.isLoaded()) {
                 await ffmpeg.load();
-                ffmpeg.FS('writeFile', 'input.mp4', new Uint8Array(data));
-                
-                // Увеличение частоты кадров до 535 и применение эффекта отзеркаливания
-                await ffmpeg.run('-i', 'input.mp4', '-vf', 'hflip,fps=535', 'output.mp4');
-                
-                const outputData = ffmpeg.FS('readFile', 'output.mp4');
-                const blob = new Blob([outputData.buffer], { type: 'video/mp4' });
-                const url = URL.createObjectURL(blob);
-                
-                const downloadLink = document.getElementById('downloadLink');
-                downloadLink.href = url;
-                downloadLink.download = 'output.mp4';
-                downloadLink.style.display = 'block';
-                downloadLink.innerText = 'Скачать готовое видео';
-            };
-            reader.readAsArrayBuffer(file);
+            }
+
+            // Загружаем видеофайл в память
+            ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(file));
+
+            // Применяем отзеркаливание и увеличиваем частоту кадров до 535
+            await ffmpeg.run('-i', 'input.mp4', '-vf', 'hflip,fps=535', 'output.mp4');
+
+            // Получаем обработанное видео и создаем ссылку для загрузки
+            const data = ffmpeg.FS('readFile', 'output.mp4');
+            const blob = new Blob([data.buffer], { type: 'video/mp4' });
+            const url = URL.createObjectURL(blob);
+
+            const downloadLink = document.getElementById('downloadLink');
+            downloadLink.href = url;
+            downloadLink.download = 'output.mp4';
+            downloadLink.style.display = 'block';
+            downloadLink.innerText = 'Скачать готовое видео';
         });
     </script>
 </body>
 </html>
-
-
